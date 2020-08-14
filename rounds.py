@@ -15,7 +15,7 @@ all_sorted_players = []
 all_matches_tourney = 0
 
 
-def solo_round_1(min_players, max_players, matches_to_play, syntax, s_bias, spread, scoreboard):
+def solo_round_1(min_players, max_players, matches_to_play, syntax, s_bias, sbs, min_skill, point_system):
     # set globals
     global methods
     global all_players
@@ -30,12 +30,12 @@ def solo_round_1(min_players, max_players, matches_to_play, syntax, s_bias, spre
 
     for i in range(player_amt):
         name = ''.join((random.choice(syntax) for x in range(random.randint(3, 20))))
-        skill = random.randint(0, player_amt * spread)
-        play_style = (((skill / player_amt) * 100 + random.random()) / 100) < 1
-        all_players.append(Player(skill, 1, play_style, name))
-        player_pool.append(Player(skill, 1, play_style, name))
+        skill = random.randint(min_skill, 1000)
+        play_style = (((skill / 1000) * 100 + random.random()) / 100)*(s_bias if s_bias > 0 else 1) < 1
+        all_players.append(Player(skill, random.randint(int(skill/2), 1000), 1, play_style, name))
+        player_pool.append(Player(skill, random.randint(int(skill/2), 1000), 1, play_style, name))
 
-    plasmic = Player(player_amt*.76, 1, .63, "ASC Plasmic")
+    plasmic = Player(762, 902, 1, .63, "ASC Plasmic")
     all_players.append(plasmic)
     player_pool.append(plasmic)
 
@@ -44,10 +44,10 @@ def solo_round_1(min_players, max_players, matches_to_play, syntax, s_bias, spre
         time_playing_s = time.time()  # Start time
 
         if matches == 0:
-            all_matches = methods.create_play_matches(player_pool, True, s_bias)
+            all_matches = methods.create_play_matches(player_pool, True, 0)
             all_matches_tourney += len(all_matches)
         else:
-            all_matches = methods.create_play_matches(all_sorted_players, False, s_bias)
+            all_matches = methods.create_play_matches(all_sorted_players, False, 0)
             all_matches_tourney += len(all_matches)
 
         time_playing = (time.time() - time_playing_s).__round__(3)
@@ -55,13 +55,11 @@ def solo_round_1(min_players, max_players, matches_to_play, syntax, s_bias, spre
         # Create scoreboard
         time_sorting_s = time.time()  # Start time
 
-        all_sorted_players = methods.create_scoreboard(2, all_players)
+        all_sorted_players = methods.create_scoreboard(2, all_players, point_system)
 
         time_sorting = (time.time() - time_sorting_s).__round__(3)
 
         # Print what is going on
-        print("\nThere are", len(all_sorted_players), "players on the scoreboard.")
-
         print("Match group", matches + 1, "done and sorted. It took", time_playing,
               "seconds to play all matches. It took",
               time_sorting, "seconds to sort all players.")
@@ -71,31 +69,32 @@ def solo_round_1(min_players, max_players, matches_to_play, syntax, s_bias, spre
               "points and", all_sorted_players[0].get_wins(), "win(s).")
 
         # New player pool
-        player_pool = all_sorted_players
+        if matches+1 <= matches_to_play:
+            player_pool = all_sorted_players
 
-        for new_players in range(random.randint(10, 100)):
-            name = ''.join((random.choice(syntax) for x in range(random.randint(3, 20))))
-            skill = random.randint(0, player_amt * spread)
-            play_style = (((skill / player_amt) * 100 + random.random()) / 100) < 1
-            player_amt += 1
-            all_players.append(Player(skill, 1, play_style, name))
-            player_pool.append(Player(skill, 1, play_style, name))
-            player_pool.remove(player_pool[random.randint(0, len(player_pool) - 1)])
+            for new_players in range(random.randint(10, 100)):
+                name = ''.join((random.choice(syntax) for x in range(random.randint(3, 20))))
+                skill = random.randint(min_skill, 1000)
+                play_style = (((skill / 1000) * 100 + random.random()) / 100) * (s_bias if s_bias > 0 else 1)
+                player_amt += 1
+                all_players.append(Player(skill, random.randint(skill/2, 1000), 1, play_style, name))
+                player_pool.append(Player(skill, random.randint(skill/2, 1000), 1, play_style, name))
+                player_pool.remove(player_pool[random.randint(0, len(player_pool) - 1)])
 
         time.sleep(4)
 
     total_points = 0
 
     # FINAL SORT
-    all_sorted_players = methods.create_scoreboard(2, all_players)
-    scoreboard = methods.create_scoreboard(0, all_players)
+    all_sorted_players = methods.create_scoreboard(2, all_players, point_system)
 
     # Showing scoreboard
     print("\nSCOREBOARD:")
     for sb in range(len(all_sorted_players)):
-        if sb < 10000 and scoreboard:
-            print(sb + 1, ". ", scoreboard[sb].get_name(), " - ", scoreboard[sb].get_points(), " points; ",
-                  scoreboard[sb].get_wins(), " wins; ", scoreboard[sb].get_total_kills(), " kills.", sep="")
+        if sb < 10000 and sbs:
+            print(sb + 1, ". ", all_sorted_players[sb].get_name(), " - ", all_sorted_players[sb].get_points(), " points; ",
+                  all_sorted_players[sb].get_wins(), " wins; ", all_sorted_players[sb].get_total_kills(), " kills. Skill: ",
+                  all_sorted_players[sb].get_skill(), "/1000, play style: ", all_sorted_players[sb].get_play_style(), sep="")
         total_points += all_sorted_players[sb].get_points()
 
     avg_points = int(total_points / len(all_sorted_players))

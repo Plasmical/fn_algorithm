@@ -17,21 +17,23 @@ class Player:
     wins = 0
     match_report = []
 
-    def __init__(self, skill, drop_spot, play_style, name):
-        self._skill = skill
+    def __init__(self, mech, rotation, drop_spot, play_style, name):
+        self._skill = mech
+        self._rotate = rotation
         self._drop_spot = drop_spot
         self._play_style = play_style
         self._name = name
+        self._match_report = self.match_report
 
-    def add_match_report(self):
+    def add_match_report(self, points, kills, placement):
         self.points_match -= self.points
-        self.match_report.append("Match " + str(len(self.match_report)) + ": kills-" + str(self.kills) + ", "
-                                                                                                         "placement-" + str(
-            self.placement_match) + ", points-" + str(self.points_match))
+        m_report = self._name + " - Match " + str(len(self.match_report)) + ": kills-" + str(kills) + ", placement-" + str(placement) + ", points-" + str(points)
+        self._match_report.append(m_report)
 
     def get_match_report(self):  # TODO (broken)
-        for reports in range(len(self.match_report)):
-            print(self.match_report[reports])
+        for reports in range(len(self._match_report)):
+            if self._match_report.__contains__(self._name):
+                print(self._match_report[reports])
 
     def get_name(self):
         return self._name
@@ -94,6 +96,9 @@ class Player:
     def set_points_match(self):
         self.points_match = self.points
 
+    def get_rotation(self):
+        return self._rotate
+
 
 class Match:
     players_alive = 0
@@ -121,23 +126,31 @@ def play_match(players_in_match, style_bias):
             for pl in range(len(pool)):
                 if pl >= len(pool):
                     break
+                nums = []
+                for all_p in range(len(pool)):
+                    if not all_p == pl:
+                        if pool[all_p].get_rotation()/1000 < random.random()/1.02:
+                            nums.append(all_p)
                 if pool[pl].get_play_style() + style_bias > random.random():
-                    nump = random.randint(0, players_alive - 1)
-                    p2 = nump if not pl else nump + 1 if not nump + 1 >= len(pool) else nump - 1
-                    if (pool[pl].get_skill() * random.random() + 2) >= (
-                            pool[p2].get_skill() * random.random()):
-                        pool[pl].add_kills(1)
-                        pool[p2].set_placement_match(len(pool))
-                        del (pool[p2])
-                        players_alive -= 1
-                    else:
-                        pool[p2].add_kills(1)
-                        pool[pl].set_placement_match(len(pool))
-                        del (pool[pl])
-                        players_alive -= 1
+                    p2 = -1
+                    if len(nums) > 0:
+                        nump = random.randint(0, len(nums) - 1)
+                        p2 = nums[nump]
+                    if p2 != -1:
+                        if (pool[pl].get_skill() + random.random() * 20 + 20) >= (
+                                pool[p2].get_skill() + random.random() * 20):
+                            pool[pl].add_kills(1)
+                            pool[p2].set_placement_match(players_alive)
+                            del (pool[p2])
+                            players_alive -= 1
+                        else:
+                            pool[p2].add_kills(1)
+                            pool[pl].set_placement_match(players_alive)
+                            del (pool[pl])
+                            players_alive -= 1
         elif len(pool) == 2:
-            if (pool[0].get_skill() * random.random() + 2) >= (
-                    pool[1].get_skill() * random.random()):
+            if (pool[0].get_skill() + random.random() * 20 + 20) >= (
+                    pool[1].get_skill() + random.random() * 20):
                 pool[0].add_kills(1)
                 pool[1].set_placement_match(2)
                 del (pool[1])
@@ -152,27 +165,53 @@ def play_match(players_in_match, style_bias):
         players_alive = len(pool)
 
 
-def sort_players(to_sort_t):
+def give_points(to_give, points_system):
+    p_points = 0
+
+    split_system = points_system.split("/")  # splits placement and elims
+
+    placement_pts = split_system[0].split(",")  # splits between different placements
+    placements = []
+    points_give = []
+    for i in range(len(placement_pts)):
+        temp = placement_pts[i].split(":")
+        placements.append(int(temp[0]))
+        points_give.append(int(temp[1]))
+
+    e_split2 = split_system[1].split("-")  # splits off bloatware
+    elim_pts = int(e_split2[1].split(",")[0])  # gets elim points
+
+    to_give.add_points(to_give.get_kills() * elim_pts)
+    p_points += to_give.get_kills() * elim_pts
+
+    if to_give.get_placement_match() == 1:
+        to_give.add_points(points_give[0])
+        to_give.add_win()
+
+    for p in range(len(placement_pts)):
+        if p + 1 == len(placement_pts):
+            continue
+        if to_give.get_placement_match() <= placements[p]:
+            to_give.add_points(points_give[p])
+            p_points += points_give[p]
+        else:
+            break
+    to_give.add_match_report(p_points, to_give.get_kills(), to_give.get_placement_match())
+    to_give.set_points_match()
+    to_give.add_total_kills()
+    to_give.reset_kills()
+
+
+def sort_players(to_sort_t, points_system, give_pts):
     all_sorted_players_d: List[Player] = []
 
     to_sort = to_sort_t
 
-    for pl_to_add in range(len(to_sort)):  # Loop over all players to be added
+    if give_pts:
+        for pl_to_add in range(len(to_sort)):  # Loop over all players to be added
+            give_points(to_sort[pl_to_add], points_system)
 
-        to_sort[pl_to_add].add_points(to_sort[pl_to_add].get_kills())
-        if to_sort[pl_to_add].get_placement_match() == 1:
-            to_sort[pl_to_add].add_points(3)
-            to_sort[pl_to_add].add_win()
-        if to_sort[pl_to_add].get_placement_match() <= 5:
-            to_sort[pl_to_add].add_points(2)
-        if to_sort[pl_to_add].get_placement_match() <= 15:
-            to_sort[pl_to_add].add_points(2)
-        if to_sort[pl_to_add].get_placement_match() <= 25:
-            to_sort[pl_to_add].add_points(3)
-        to_sort[pl_to_add].add_match_report()
-        to_sort[pl_to_add].set_points_match()
-        to_sort[pl_to_add].add_total_kills()
-        to_sort[pl_to_add].reset_kills()
+    for pl_to_add in range(len(to_sort)):  # Loop over all players to be added
         if pl_to_add == 0:  # Check if list is empty
             all_sorted_players_d.append(to_sort[pl_to_add])
             continue
@@ -182,10 +221,15 @@ def sort_players(to_sort_t):
                 all_sorted_players_d.insert(al_added, to_sort[pl_to_add])
                 break  # Prevent adding multiple times
             elif to_sort[pl_to_add].get_points() == all_sorted_players_d[al_added].get_points():  # Tiebreaker
-                if to_sort[pl_to_add].get_total_kills() > all_sorted_players_d[al_added].get_total_kills():
-                    # Has more kills than this player
+                if to_sort[pl_to_add].get_wins() > to_sort[al_added].get_wins():
+                    # Has more wins than this player so add him
                     all_sorted_players_d.insert(al_added, to_sort[pl_to_add])
                     break  # Prevent adding multiple times
+                elif to_sort[pl_to_add].get_wins() == all_sorted_players_d[al_added].get_wins():  # Tiebreaker
+                    if to_sort[pl_to_add].get_total_kills() > all_sorted_players_d[al_added].get_total_kills():
+                        # Has more kills than this player
+                        all_sorted_players_d.insert(al_added, to_sort[pl_to_add])
+                        break  # Prevent adding multiple times
                 # TODO
             if al_added + 1 >= len(all_sorted_players_d):
                 all_sorted_players_d.append(to_sort[pl_to_add])
@@ -216,17 +260,17 @@ def sort_players_skip(to_sort, skip_at):
     return all_sorted_players_d
 
 
-def create_scoreboard(type_scoreboard, to_sort):
+def create_scoreboard(type_scoreboard, to_sort, point_system, give_pts):
     # SORTING
     all_sorted_players_d = []
     if type_scoreboard == 0:  # Type 0 -> in-game type (top 10k)
-        all_sorted_players_d = sort_players(to_sort)
+        all_sorted_players_d = sort_players(to_sort, point_system, give_pts)
 
     elif type_scoreboard == 1:  # Type 1 -> Shortened version (must have >0 points)
         all_sorted_players_d = sort_players_skip(to_sort, 0)
 
     elif type_scoreboard == 2:  # Type 2 -> Lengthened version (all)
-        all_sorted_players_d = sort_players(to_sort)
+        all_sorted_players_d = sort_players(to_sort, point_system, give_pts)
 
     return all_sorted_players_d
 
