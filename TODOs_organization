@@ -1,0 +1,33 @@
+TODOS:
+
+Change matchmaking (time-based) -> TODO
+Adjust variables -> TODO
+Create changing variables -> TODO
+Create custom -> TODO
+Organize different tourneys (see below) -> TODO
+Clean up code in general -> TODO
+
+
+Presets: TODO (in progress)
+
+Solos: TODO (in progress)
+* 0 - Solo cash cup  -> Works
+* 1 - Solo cash r1 + Solo cash r2  -> TODO (in progress)
+* 2 - Dreamhack stage 1 + Dreamhack stage 2 + Dreamhack finals  -> TODO (next)
+* 3 - FNCS stage 1 + FNCS stage 2 + FNCS heats + FNCS finals  -> TODO (in progress)
+* 4 - World Cup weekly opens + World Cup weekly finals + World Cup finals  -> TODO (in progress)
+* 4 - 1v1 (creative)  -> TODO
+* 5 - 1v1 (kill race)  -> TODO
+
+Duos: TODO
+* 0 - Duo cash cup  -> TODO
+
+Custom  -> TODO (Last)
+
+Different tournament styles  TODO (make stuff into methods)
+
+
+MACHINE LEARNING
+
+Perfect player  -> TODO
+^ Would be the only player who's values are changed between tournaments
